@@ -14,7 +14,7 @@ def user(request):
         email = request.POST.get('email')
         user = User.create(username, password, email)
         user.save()
-        return JsonResponse({"code": "200", "message": "User created successfully"})
+        return JsonResponse({"code": "200", "message": "User created successfully", "new_id": user.id})
     elif request.method == 'GET':
         try:
             user = User.objects.get(id=request.GET.get('id'))
