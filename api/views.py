@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 
-from api.models import User
+from api.models import User, Appliance
 
 # Create your views here.
 def index(request):
@@ -24,3 +24,19 @@ def user(request):
     else:
         return JsonResponse({"code": "400", "message": "Invalid request method"})
 
+def appliance(request):
+    if request.method == 'POST':
+        appname = request.POST.get('appname')
+        wattage = request.POST.get('wattage')
+        gallons = request.POST.get('gallons')
+        appliance = Appliance.create(appname, wattage, gallons)
+        appliance.save()
+        return JsonResponse({"code": "200", "message": "Appliance created successfully", "new_id": appliance.id})
+    elif request.method == 'GET':
+        try:
+            user = Appliance.objects.get(id=request.GET.get('id'))
+            return JsonResponse({"code": "200", "message": "Appliance found", "appliance": { "appname": appliance.appname, "wattage": appliance.wattage, "gallons": appliance.gallons}})
+        except Appliance.DoesNotExist:
+            return JsonResponse({"code": "404", "message": "Appliance not found"})
+    else:
+        return JsonResponse({"code": "400", "message": "Invalid request method"})
