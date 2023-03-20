@@ -1,35 +1,36 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 
-from api.models import User, Appliance
+from api.models import Appliance_Type
 
 # Create your views here.
 def index(request):
     return HttpResponse("<h1>Hello, world. You're at the main index.</h1>")
 
-def user(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        email = request.POST.get('email')
-        user = User.create(username, password, email)
-        user.save()
-        return JsonResponse({"code": "200", "message": "User created successfully", "new_id": user.id})
-    elif request.method == 'GET':
-        try:
-            user = User.objects.get(id=request.GET.get('id'))
-            return JsonResponse({"code": "200", "message": "User found", "user": { "username": user.username, "email": user.email}})
-        except User.DoesNotExist:
-            return JsonResponse({"code": "404", "message": "User not found"})
-    else:
-        return JsonResponse({"code": "400", "message": "Invalid request method"})
+# def user(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#         email = request.POST.get('email')
+#         user = User.create(username, password, email)
+#         user.save()
+#         return JsonResponse({"code": "200", "message": "User created successfully", "new_id": user.id})
+#     elif request.method == 'GET':
+#         try:
+#             user = User.objects.get(id=request.GET.get('id'))
+#             return JsonResponse({"code": "200", "message": "User found", "user": { "username": user.username, "email": user.email}})
+#         except User.DoesNotExist:
+#             return JsonResponse({"code": "404", "message": "User not found"})
+#     else:
+#         return JsonResponse({"code": "400", "message": "Invalid request method"})
 
-def appliance(request):
+def appliance_type(request):
     if request.method == 'POST':
-        appname = request.POST.get('appname')
+        title = request.POST.get('title')
         wattage = request.POST.get('wattage')
         gallons = request.POST.get('gallons')
-        appliance = Appliance.create(appname, wattage, gallons)
+        is_active = request.POST.get('is_active')
+        appliance = Appliance.create(title, wattage, gallons, is_active)
         appliance.save()
         return JsonResponse({"code": "200", "message": "Appliance created successfully", "new_id": appliance.id})
     elif request.method == 'GET':
