@@ -24,20 +24,20 @@ def index(request):
 #     else:
 #         return JsonResponse({"code": "400", "message": "Invalid request method"})
 
-def appliance_type(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        wattage = request.POST.get('wattage')
-        gallons = request.POST.get('gallons')
-        is_active = request.POST.get('is_active')
-        appliance = Appliance.create(title, wattage, gallons, is_active)
-        appliance.save()
-        return JsonResponse({"code": "200", "message": "Appliance created successfully", "new_id": appliance.id})
-    elif request.method == 'GET':
-        try:
-            user = Appliance.objects.get(id=request.GET.get('id'))
-            return JsonResponse({"code": "200", "message": "Appliance found", "appliance": { "appname": appliance.appname, "wattage": appliance.wattage, "gallons": appliance.gallons}})
-        except Appliance.DoesNotExist:
-            return JsonResponse({"code": "404", "message": "Appliance not found"})
-    else:
-        return JsonResponse({"code": "400", "message": "Invalid request method"})
+# def appliance_type(request):
+#     if request.method == 'POST':
+#         title = request.POST.get('title')
+#         wattage = request.POST.get('wattage')
+#         gallons = request.POST.get('gallons')
+#         is_active = request.POST.get('is_active')
+#         appliance = Appliance.create(title, wattage, gallons, is_active)
+#         appliance.save()
+#         return JsonResponse({"code": "200", "message": "Appliance created successfully", "new_id": appliance.id})
+#     elif request.method == 'GET':
+#         try:
+#             user = Appliance.objects.get(id=request.GET.get('id'))
+#             return JsonResponse({"code": "200", "message": "Appliance found", "appliance": { "appname": appliance.appname, "wattage": appliance.wattage, "gallons": appliance.gallons}})
+#         except Appliance.DoesNotExist:
+#             return JsonResponse({"code": "404", "message": "Appliance not found"})
+#     else:
+#         return JsonResponse({"code": "400", "message": "Invalid request method"})
