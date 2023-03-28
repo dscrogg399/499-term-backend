@@ -20,8 +20,8 @@ from django.db import models
 class Appliance_Type(models.Model):
     id = models.BigAutoField(primary_key=True)
     title = models.CharField(max_length=50)
-    wattage = models.IntegerField()
-    gallons = models.IntegerField()
+    wattage = models.FloatField() 
+    gallons = models.FloatField() 
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField()
 
