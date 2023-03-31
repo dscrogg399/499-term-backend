@@ -60,7 +60,7 @@ class Aperture(models.Model):
     )
     id = models.BigAutoField(primary_key=True)
     type = models.IntegerField(choices=d_w)
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=50, null=True)
     status = models.BooleanField() #1 on, 0 off
     x = models.FloatField() 
     y = models.FloatField()
