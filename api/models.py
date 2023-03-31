@@ -60,6 +60,7 @@ class Aperture(models.Model):
     )
     id = models.BigAutoField(primary_key=True)
     type = models.IntegerField(choices=d_w)
+    title = models.CharField(max_length=50)
     status = models.BooleanField() #1 on, 0 off
     x = models.FloatField() 
     y = models.FloatField()
@@ -67,8 +68,8 @@ class Aperture(models.Model):
     is_active = models.BooleanField()
 
     @classmethod
-    def create(cls, status, type, x, y, is_active):
-        aperture = cls(status = status, type = type, x = x, y = y, is_active = is_active)
+    def create(cls, status, type, title, x, y, is_active):
+        aperture = cls(status = status, type = type, title = title, x = x, y = y, is_active = is_active)
         return aperture
     
     def __str__(self):
