@@ -147,24 +147,30 @@ class Event(models.Model):
     appliance = models.ForeignKey(
         Appliance,
         on_delete=models.PROTECT,
-        )
+        null=True)
     log = models.ForeignKey(
         Event_Log,
         on_delete=models.PROTECT,
-        )
+        null=True)
     on_at = models.DateTimeField()
     off_at = models.DateTimeField()
-    watts_used = models.FloatField()
-    water_used = models.FloatField()
-    cost = models.FloatField()
+    watts_used = models.FloatField(null=True)
+    water_used = models.FloatField(null=True)
+    cost = models.FloatField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField()
+    is_active = models.BooleanField(null=True)
 
     @classmethod
     def create(cls, appliance_id, on_at, off_at, watts_used, water_used, cost, is_active):
         event = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, watts_used = watts_used, 
                     water_used = water_used, cost = cost, is_active = is_active)
         return event
+    
+    # function for creating events without energy, water and cost parameters
+    @classmethod
+    def create_lite(cls, appliance_id, on_at, off_at, is_active):  
+        event_lite = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, is_active = is_active)
+        return event_lite
     
     def __str__(self):
         return self.id
