@@ -41,3 +41,5 @@ def index(request):
 #             return JsonResponse({"code": "404", "message": "Appliance not found"})
 #     else:
 #         return JsonResponse({"code": "400", "message": "Invalid request method"})
+
+
