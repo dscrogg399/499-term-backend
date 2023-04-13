@@ -8,7 +8,7 @@ import simpy
 from django .conf import settings
 import json
 from .weather import getTemperature, getHumidity, getTemperatureAtTime
-import numpy as np
+#import numpy as np
 from datetime import datetime, time, timezone
 from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
 
@@ -277,7 +277,7 @@ def temperature_calculation(current_temp, now):
 
     #calculate and set the new temperature
     return current_temp - total_delta
-    
+
 def is_weekday(time_period):
     return time_period.weekday() < 5
 
@@ -290,6 +290,15 @@ def random_time(begin, end):
 def random_duration(begin, end):
     return timedelta(minutes = random.uniform(begin, end))
 
+def event_loop():
+    on_Appliances = Appliance.objects.filter(status = True, is_active = True)
+    print(on_Appliances.count())
+    off_Appliances =  Appliance.objects.filter(status = False, is_active = True)
+    print(off_Appliances.count())
+
+    
+    
+    
 def clothes_dryer_washer (env, time_period):
     currentAppliance = Appliance()
 
