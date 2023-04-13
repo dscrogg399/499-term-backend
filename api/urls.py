@@ -10,5 +10,6 @@ urlpatterns = [
     path('air_quality/', air_quality, name='air_quality'),
     path('monthly_report/', monthly_report, name='monthly_report'),
     path('budget/', budget, name='budget'),
-    path('create_event/', create_event, name='create_event')
+    path('create_event/', create_event, name='create_event'),
+    path('get_todays_events/', get_todays_events, name='get_todays_events')
 ]

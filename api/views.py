@@ -4,6 +4,7 @@ from django import forms
 from django.core import serializers
 from django.core.serializers import serialize
 from django.forms.models import model_to_dict
+from django.db.models import F
 from datetime import datetime
 import json
 import pytz
@@ -102,13 +103,16 @@ def air_quality(request):
     
 
 def monthly_report(request):
-    # used to filter for specific reports?
-    # month = request.POST.get('month')
-    # year = request.POST.get('year')
+    # used to filter for specific reports
+    month = request.POST.get('month')
+    year = request.POST.get('year')
 
-    event_log = Event_Log.objects.all().values('watts_used', 'water_used', 'cost').filter(is_active=True)
-    serialized_event_log = json.dumps(str(event_log))
-    return JsonResponse({"data": serialized_event_log})
+    event_logs = Event_Log.objects.all().values('created_at', 'watts_used', 'water_used')
+    event_logs.filter(is_active=True, created_at__month=month, created_at__year=year)
+    
+    
+    serialized_event_logs = json.dumps(str(event_logs))
+    return JsonResponse({"code": "200", "message": "Monthly report fetched", "data": json.loads(serialized_event_logs)})
 
 
 def budget(request):
@@ -152,6 +156,20 @@ def create_event(request):
                         #  "appliance_id": new_event.appliance.id, "on_at": new_event.on_at, "off_at": new_event.off_at, "log_id": new_event.log_id, "watts_used": new_event.watts_used, "water_used": new_event.water_used, "cost": new_event.cost}})
     except Exception as e:
         return JsonResponse({"code": "500", "message": str(e)})
+    
+
+def get_todays_events(request):
+
+    # get events and values, with appliance title from the appliance model
+    events = Event.objects.all().values('appliance', 'on_at', 'off_at', 'watts_used', 'water_used', title=F('appliance__title'))
+    # filter active events where off_at is not null (has been turned off) and the on_at is the same as current day
+    events.filter(is_active=True, off_at__isnull=False, on_at__day=datetime.now().day)
+    # order query set by most recent events based on when they were turned off
+    events.order_by('off_at')
+    
+    serialized_events = json.dumps(str(events))
+    return JsonResponse({"code": "200", "message": "Today's events fetched", "data": json.loads(serialized_events)})
+    
         
     
 
