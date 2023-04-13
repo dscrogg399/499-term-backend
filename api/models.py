@@ -148,6 +148,7 @@ class Event(models.Model):
         Appliance,
         on_delete=models.PROTECT,
         )
+        
     log = models.ForeignKey(
         Event_Log,
         on_delete=models.PROTECT,

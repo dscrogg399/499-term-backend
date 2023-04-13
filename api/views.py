@@ -6,7 +6,7 @@ from api.models import Appliance_Type
 # Create your views here.
 def index(request):
     return HttpResponse("<h1>Hello, world. You're at the main index.</h1>")
-
+# ONly post air quality, management, budget, event logs 
 # def user(request):
 #     if request.method == 'POST':
 #         username = request.POST.get('username')
@@ -41,5 +41,4 @@ def index(request):
 #             return JsonResponse({"code": "404", "message": "Appliance not found"})
 #     else:
 #         return JsonResponse({"code": "400", "message": "Invalid request method"})
-
 
