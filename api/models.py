@@ -1,22 +1,8 @@
+from datetime import timedelta
 from django.db import models
 
 # Create your models here.
 
-#These are test models for the API and just serve as examples
-# class User(models.Model):
-#     id = models.BigAutoField(primary_key=True)
-#     username = models.CharField(max_length=50)
-#     password = models.CharField(max_length=50)
-#     email = models.CharField(max_length=50)
-
-#     @classmethod
-#     def create(cls, username, password, email):
-#  
-#        user = cls(username=username, password=password, email=email)
-#         return user
-
-#     def __str__(self):
-#         return self.username
 class Appliance_Type(models.Model):
     id = models.BigAutoField(primary_key=True)
     title = models.CharField(max_length=50)
@@ -50,6 +36,21 @@ class Appliance(models.Model):
     def create(cls, title, status, x, y, is_active):
         appliance = cls(title = title, status = status, x = x, y = y, is_active = is_active)
         return appliance
+
+    def toggle_appliance(self, now):
+        if self.status:
+            #end event
+            #get the last event connected to this appliance and end it
+            event = Event.objects.filter(appliance_id=self.id, off_at=None, is_active=True).latest('created_at')
+            event.end_event(now, self.appliance_type_id)
+        else:
+            #generate event
+            event_log = Event_Log.objects.filter(is_active=True).latest('created_at')
+            new_event = Event.start_event(self.id, event_log.id, now, True)
+            new_event.save()
+        self.status = not self.status
+        self.save()
+
     
     def __str__(self):
         return self.id
@@ -128,9 +129,9 @@ class Budget_Target(models.Model):
 
 class Event_Log(models.Model):
     id = models.BigAutoField(primary_key=True)
-    watts_used = models.FloatField()
-    water_used = models.FloatField()
-    cost = models.FloatField()
+    watts_used = models.FloatField(null=True)
+    water_used = models.FloatField(null=True)
+    cost = models.FloatField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField()
 
@@ -153,7 +154,7 @@ class Event(models.Model):
         on_delete=models.PROTECT,
         null=True)
     on_at = models.DateTimeField()
-    off_at = models.DateTimeField()
+    off_at = models.DateTimeField(null=True)
     watts_used = models.FloatField(null=True)
     water_used = models.FloatField(null=True)
     cost = models.FloatField(null=True)
@@ -161,9 +162,9 @@ class Event(models.Model):
     is_active = models.BooleanField(null=True)
 
     @classmethod
-    def create(cls, appliance_id, on_at, off_at, watts_used, water_used, cost, is_active):
+    def create(cls, appliance_id, on_at, off_at, watts_used, water_used, cost, log_id, is_active):
         event = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, watts_used = watts_used, 
-                    water_used = water_used, cost = cost, is_active = is_active)
+                    water_used = water_used, cost = cost, log_id = log_id, is_active = is_active)
         return event
     
     # function for creating events without energy, water and cost parameters
@@ -171,6 +172,56 @@ class Event(models.Model):
     def create_lite(cls, appliance_id, on_at, off_at, is_active):  
         event_lite = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, is_active = is_active)
         return event_lite
+
+    @classmethod
+    def start_event(cls, appliance_id, log_id, on_at, is_active):  
+        event_lite = cls(appliance_id = appliance_id, log_id = log_id, on_at = on_at, is_active = is_active)
+        return event_lite
+
+    def end_event(self, off_at, appliance_type_id):
+        self.off_at = off_at
+        # #calculate difference between on_at and off_at
+        diff = (off_at - self.on_at).total_seconds() / 60
+        # #get appliance type
+        appliance_type = Appliance_Type.objects.get(id = appliance_type_id)
+        # #calculate energy and water used
+        self.watts_used = appliance_type.wattage * diff
+        self.water_used = appliance_type.gallons * diff
+        # #calculate cost
+        self.cost = (self.watts_used * 0.00012) + (self.water_used * 0.003368983957219)
+
+        #if device uses hot water, calculate hot water used
+        if appliance_type_id in [11,12,13,15]:
+            water_heater = Appliance_Type.objects.get(id = 8)
+            hot_water = appliance_type.gallons * diff
+            #if its a shower or bath, 65% hot water
+            if appliance_type_id in [11,12]:
+                hot_water *= 0.65
+            #if its the clothes washer, 85% hot water
+            elif appliance_type_id == 13:
+                hot_water *= 0.85
+            #else its the dishwasher, 100% hot water
+
+            #post hoc calculation for water heater
+            wh_on_duration = hot_water * 4
+ 
+            #get the new on time 
+            new_on_at= off_at - timedelta(minutes = wh_on_duration)
+
+            #calculate the wattage and cost
+            wh_watts = water_heater.wattage * wh_on_duration
+            wh_cost = (wh_watts * 0.00012)
+
+            #water heater is appliance id 37
+            #create event
+            wh_event = Event.create(37, new_on_at, off_at, wh_watts, 0, wh_cost, self.log_id, True)
+            wh_event.save()
+            return
+
+
+        # #update log
+        self.save()
+        return
     
     def __str__(self):
         return self.id
