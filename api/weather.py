@@ -2,6 +2,10 @@
 from datetime import datetime, timedelta
 from meteostat import Hourly, Point
 import csv
+import ssl
+
+ssl._create_default_https_context = ssl._create_stdlib_context
+
 
 #creates a point for Birmingham, AL
 birmingham = Point(33.5186, -86.8104)
@@ -26,12 +30,37 @@ def getWeeklyHistory():
 def getTemperature():
     now = datetime.now()
 
+    #get weather from meteostat
     data = Hourly(birmingham, now - timedelta(hours=1), now)
-    data = data.fetch()['temp'].tolist()
+    temp = data.fetch()['temp'].tolist()[0]
 
-    data_datetime = [datetime.now(), data[0]]
+    #convert to fahrenheit
+    temp = celsius_to_fahrenheit(temp)
 
-    return(data_datetime)
+    return(temp)
 
-print(getWeeklyHistory())
-print(getTemperature())
+#get temp at specific time
+def getTemperatureAtTime(time):
+        #get weather from meteostat
+    data = Hourly(birmingham, time - timedelta(hours=1), time)
+    temp = data.fetch()['temp'].tolist()[0]
+
+    #convert to fahrenheit
+    temp = celsius_to_fahrenheit(temp)
+
+    return(temp)
+
+
+def getHumidity():
+    now = datetime.now()
+
+    #get weather from meteostat
+    data = Hourly(birmingham, now - timedelta(minutes=1), now)
+    humidity = data.fetch()['rhum'].tolist()[0]
+
+    return(humidity)
+
+def celsius_to_fahrenheit(celsius_temp):
+    fahrenheit_temp = (celsius_temp * 9/5) + 32
+    return fahrenheit_temp
+
