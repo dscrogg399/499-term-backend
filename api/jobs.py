@@ -1,11 +1,12 @@
 from django .conf import settings
 import json
-from .weather import getTemperature, getHumidity
+from .weather import getTemperature, getHumidity, getTemperatureAtTime
 import random
 import numpy as np
+import math
 from datetime import datetime, time, timezone
 
-from api.models import Air_Quality, Aperture
+from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
 
 #start and end time of busy time is always the same, 6-7 pm. This is converted to UTC time
 start_time = time(23, 0, 0)
@@ -176,3 +177,97 @@ def vary_hum(curr_hum, aps_open, busy):
 
     #get the new varied value, rounded to 2 decimal places
     return round(calc_new_value(curr_hum, hum_target, hum_delta), 2)
+
+
+""" This is the hvac job. It takes a given time and updates the current temp of the thermostat 
+    based off several things:
+    1. If the HVAC is on, +- 1 degree/minute until the temp exceeds the target in either direction
+    2. Also takes into account outside temp and open apertures
+        a. Outside temp changes inside temp by 0.033 degrees * the difference between the outside temp and the inside temp / minute
+        b Open apertures calculate in a similar way but with much higher rates of change, 0.4 for doors and 0.2 for windows
+    
+    It then determines whether its necessary to turn the HVAC on or off.
+
+    This job runs every minute by default and can be called to generate historical data by passing in a date time that isnt current
+    This function will be called from the normal event loop if the time is not between 23:59 and 00:00, to avoid issues with event log generation
+"""
+def hvac_job():
+    #update this to use a date time from params
+    now= datetime.now()
+
+    #get the thermostat and HVAC (thermostat id = 1, HVAC id = 34)
+    thermostat = Thermostat.objects.get(id=1)
+    hvac = Appliance.objects.get(id=34)
+
+    #target temp
+    target_temp = thermostat.target_temp
+
+    #min and max temp range
+    min = target_temp - 2
+    max = target_temp + 2
+
+    #store current temp to manipulate
+    current_temp = thermostat.current_temp
+
+    #calculate if temperature is higher or lower than target
+    higher = thermostat.current_temp > thermostat.target_temp
+
+    #if the hvac is already on, add or subtract one based off higher
+    if hvac.status:
+        if higher:
+            current_temp -= 1
+        else:
+            current_temp += 1
+
+    #now calculate the updated temp from outside temp difference and apertures using the current temp after hvac changes
+    updated_temp = temperature_calculation(current_temp, now)
+
+    #now manage the hvac based on the updated temp
+    #if the hvac is already on
+    if hvac.status:
+        #if the current temp was higher and is now lower than the target temp
+        if higher and updated_temp < target_temp:
+            #toggle the hvac off, need the function
+            hvac.status  = False
+        #if the current temp was lower and is now higher than the target temp
+        elif not higher and updated_temp > target_temp:
+            #toggle the hvac off
+            hvac.status = False
+    #if the hvac is off and the updated temp is outside the min and max range
+    elif updated_temp < min or updated_temp > max:
+        #toggle the hvac on
+        hvac.status = True
+    
+    #update the thermostat
+    thermostat.current_temp = updated_temp
+    thermostat.save()
+    #update the hvac
+    hvac.save()
+    
+def temperature_calculation(current_temp, now):
+    #get the current temperature outside and the thermostat
+    outdoor = getTemperatureAtTime(now)
+
+    
+    #deltas are calculated per 10 degrees of difference between the outside and the inside
+    diff = current_temp - outdoor
+    temp_scale = diff/ 10
+
+    #get the doors and windows
+    doors = Aperture.objects.filter(type=1, status = True)
+    windows = Aperture.objects.filter(type=2, status = True)
+
+    #calculate the deltas, multiply by the temp scale. This will give positibe or negative deltas depending on outdoor temp
+    #passive delta is 0.033/min
+    temp_delta = 0.033 * temp_scale
+    #doors have a temp delta of 0.4/min
+    door_delta = (doors.count() * 0.4) * temp_scale
+    #windows have a temp delta of 0.2/min
+    window_delta = (windows.count() * 0.2) * temp_scale
+
+    total_delta = temp_delta + door_delta + window_delta
+
+    #calculate and set the new temperature
+    return current_temp - total_delta
+
+    

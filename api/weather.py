@@ -39,12 +39,23 @@ def getTemperature():
 
     return(temp)
 
+#get temp at specific time
+def getTemperatureAtTime(time):
+        #get weather from meteostat
+    data = Hourly(birmingham, time - timedelta(hours=1), time)
+    temp = data.fetch()['temp'].tolist()[0]
+
+    #convert to fahrenheit
+    temp = celsius_to_fahrenheit(temp)
+
+    return(temp)
+
 
 def getHumidity():
     now = datetime.now()
 
     #get weather from meteostat
-    data = Hourly(birmingham, now - timedelta(hours=1), now)
+    data = Hourly(birmingham, now - timedelta(minutes=1), now)
     humidity = data.fetch()['rhum'].tolist()[0]
 
     return(humidity)
@@ -52,3 +63,4 @@ def getHumidity():
 def celsius_to_fahrenheit(celsius_temp):
     fahrenheit_temp = (celsius_temp * 9/5) + 32
     return fahrenheit_temp
+
