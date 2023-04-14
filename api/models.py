@@ -41,8 +41,11 @@ class Appliance(models.Model):
         if self.status:
             #end event
             #get the last event connected to this appliance and end it
-            event = Event.objects.filter(appliance_id=self.id, off_at=None, is_active=True).latest('created_at')
-            event.end_event(now, self.appliance_type_id)
+            try:
+                event = Event.objects.filter(appliance_id=self.id, off_at=None, is_active=True).latest('created_at')
+                event.end_event(now, self.appliance_type_id)
+            except Event.DoesNotExist:
+                pass
         else:
             #generate event
             event_log = Event_Log.objects.filter(is_active=True).latest('created_at')
