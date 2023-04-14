@@ -8,8 +8,8 @@ from django .conf import settings
 import json
 from .weather import getTemperature, getHumidity, getTemperatureAtTime
 #import numpy as np
-from datetime import datetime, time, timezone
-from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
+from datetime import datetime, time, timezone, timedelta
+from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance, Event_Log, Event
 import numpy as np
 
 #import googleapiclient.discovery
@@ -339,6 +339,64 @@ def event_loop():
             print(trues)
             print(not_trues)
             print(trues / (trues + not_trues))
+
+
+def event_summary():
+
+    now = datetime.utcnow().replace(tzinfo=None)
+    tomorrow = now.replace(hour=00, minute=00, second=00, microsecond=00) + timedelta(days=1)
+
+    # list of appliance ids that were toggled off
+    toggled_ids = []
+
+    appliances = Appliance.objects.all().order_by("id").filter(is_active=True)
+    for appliance in appliances:
+        # only turn off appliances that are still on
+        if appliance.status == True:
+            appliance.toggle_appliance(now)
+            # save the toggled appliance id to list to use for turning back on 
+            toggled_ids.append(appliance.id)
+
+    # get todays log, where the created at date matches the current day, month and year
+    # also get today's events for summing the total water and power used
+    try:
+        todays_log = Event_Log.objects.get(is_active=True, created_at__day=now.day, created_at__month=now.month, created_at__year=now.year)
+    except Event_Log.MultipleObjectsReturned:
+        print("\n Multiple logs exist for this day:")
+        print(Event_Log.objects.all().values())
+    todays_events = Event.objects.all().filter(is_active=True, off_at__isnull=False, on_at__date=datetime.now().date())
+
+    # for loops sum total water and power from all the day's events
+    water_sum = 0
+    for event in todays_events:
+        water_sum += event.water_used
+    watts_sum = 0
+    for event in todays_events:
+        watts_sum += event.watts_used
+
+    # calculate total cost from sums and set to today's log, save to DB
+    total_cost = (water_sum * 0.003368984) + (watts_sum * 0.00012)
+    todays_log.water_used = water_sum
+    todays_log.watts_used = watts_sum
+    todays_log.cost = total_cost
+    todays_log.save()
+
+    # create a log for the new (next) day, using the time delta value of tomorrow, save to DB
+    new_day_log = Event_Log.create(True)
+    new_day_log.save()
+    new_day_log.created_at = tomorrow
+    new_day_log.save()
+
+    # re query appliances to get any updates. renamed to avoid any issues with previous query variable
+    appliances_again = Appliance.objects.all().order_by("id").filter(is_active=True)
+    # if any appliances were toggled off, then use those ids to match them from appliances 
+    # and turn them back on with the now time being tomorrow
+    if len(toggled_ids) > 0:
+        for appliance_two in appliances_again:
+            for toggle_id in toggled_ids:
+                if appliance_two.id == toggle_id:
+                    appliance_two.toggle_appliance(tomorrow)
+
     
 
 
