@@ -5,5 +5,5 @@ def start():
 
     scheduler = BackgroundScheduler()
     # scheduler.add_job(air_quality_job, 'interval', seconds=300)
-    scheduler.add_job(event_loop, 'interval', seconds=10)
+    # scheduler.add_job(event_loop, 'interval', seconds=10)
     scheduler.start()

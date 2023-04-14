@@ -177,11 +177,12 @@ class Event(models.Model):
     def start_event(cls, appliance_id, log_id, on_at, is_active):  
         event_lite = cls(appliance_id = appliance_id, log_id = log_id, on_at = on_at, is_active = is_active)
         return event_lite
-
+    
     def end_event(self, off_at, appliance_type_id):
         self.off_at = off_at
         # #calculate difference between on_at and off_at
         diff = (off_at - self.on_at).total_seconds() / 60
+
         # #get appliance type
         appliance_type = Appliance_Type.objects.get(id = appliance_type_id)
         # #calculate energy and water used
@@ -216,7 +217,6 @@ class Event(models.Model):
             #create event
             wh_event = Event.create(37, new_on_at, off_at, wh_watts, 0, wh_cost, self.log_id, True)
             wh_event.save()
-            return
 
 
         # #update log

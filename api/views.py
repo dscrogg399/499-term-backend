@@ -10,9 +10,12 @@ import json
 import pytz
 
 from api.models import *
+from .jobs import event_loop
+from django.utils.dateparse import parse_datetime, parse_date
 
 
 def index(request):   
+    event_loop()
     return HttpResponse("Team 4")
 
 
@@ -22,7 +25,7 @@ def appliances(request):
 
         try:
             appliance_get = Appliance.objects.get(id=input_id)
-            now = datetime.utcnow().replace(tzinfo=pytz.utc)
+            now = datetime.utcnow().replace(tzinfo=None)
             appliance_get.toggle_appliance(now)
             if appliance_get.is_active:
                 message = "Appliance toggled on" if appliance_get.status else "Appliance toggled off"
@@ -104,14 +107,14 @@ def air_quality(request):
 
 def monthly_report(request):
     # used to filter for specific reports
-    month = request.POST.get('month')
-    year = request.POST.get('year')
+    date = parse_date(request.POST.get('date'))
+    print(date)
 
-    event_logs = Event_Log.objects.all().values('created_at', 'watts_used', 'water_used')
-    event_logs.filter(is_active=True, created_at__month=month, created_at__year=year)
+
+    event_logs = Event_Log.objects.all().order_by('id').filter(is_active=True, created_at__month=date.month(), created_at__year=date.year())
     
     
-    serialized_event_logs = json.dumps(str(event_logs))
+    serialized_event_logs = serializers.serialize('json', event_logs)
     return JsonResponse({"code": "200", "message": "Monthly report fetched", "data": json.loads(serialized_event_logs)})
 
 
@@ -138,37 +141,39 @@ def budget(request):
     
 
 def create_event(request):
+    if request.method == 'POST':
+        appliance_id = request.POST.get('appliance_id')
+        on_at = parse_datetime(request.POST.get('on_at'))
+        off_at = parse_datetime(request.POST.get('off_at'))
 
-    appliance_id = request.POST.get('appliance_id')
-    on_at = request.POST.get('on_at')
-    off_at = request.POST.get('off_at')
+        try:
+            appliance = Appliance.objects.get(id=appliance_id)
+            event_log = Event_Log.objects.filter(is_active=True).latest('created_at')
+            new_event = Event.start_event(appliance_id, event_log.id, on_at, True)
+            new_event.save()
+            new_event.end_event(off_at, appliance.appliance_type_id)
 
-    try:
-        # appliance = Appliance.objects.get(id=appliance_id)
-        # event_log = Event_Log.objects.filter(is_active=True).latest('created_at')
-        # new_event = Event.start_event(appliance_id, event_log.id, on_at, True)
-        # new_event.save()
-        # new_event.end_event(off_at, appliance.appliance_type_id)
 
-        return JsonResponse({"code": "200", })
-
-        # return JsonResponse({"code": "200", "message": "Event created", "data": {"id": int(new_event.id), 
-                        #  "appliance_id": new_event.appliance.id, "on_at": new_event.on_at, "off_at": new_event.off_at, "log_id": new_event.log_id, "watts_used": new_event.watts_used, "water_used": new_event.water_used, "cost": new_event.cost}})
-    except Exception as e:
-        return JsonResponse({"code": "500", "message": str(e)})
+            return JsonResponse({"code": "200", "message": "Event created", "data": {"id": int(new_event.id), 
+                             "appliance_id": new_event.appliance.id, "on_at": new_event.on_at, "off_at": new_event.off_at, "log_id": new_event.log_id, "watts_used": new_event.watts_used, "water_used": new_event.water_used, "cost": new_event.cost}})
+        except Exception as e:
+            return JsonResponse({"code": "500", "message": str(e)})
+    else:
+        return JsonResponse({"code": "400", "message": "Invalid request method"})
     
 
 def get_todays_events(request):
 
-    # get events and values, with appliance title from the appliance model
-    events = Event.objects.all().values('appliance', 'on_at', 'off_at', 'watts_used', 'water_used', title=F('appliance__title'))
-    # filter active events where off_at is not null (has been turned off) and the on_at is the same as current day
-    events.filter(is_active=True, off_at__isnull=False, on_at__day=datetime.now().day)
-    # order query set by most recent events based on when they were turned off
-    events.order_by('off_at')
-    
-    serialized_events = json.dumps(str(events))
-    return JsonResponse({"code": "200", "message": "Today's events fetched", "data": json.loads(serialized_events)})
+    if request.method == 'GET':
+        # get events and values, with appliance title from the appliance model
+        # filter active events where off_at is not null (has been turned off) and the on_at is the same as current day
+        # order query set by most recent events based on when they were turned off
+        events = Event.objects.all().order_by('on_at').filter(is_active=True, off_at__isnull=False, on_at__date=datetime.now().date())
+
+        serialized_events = serializers.serialize('json', events)
+        return JsonResponse({"code": "200", "message": "Today's events fetched", "data": json.loads(serialized_events)})
+    else:
+        return JsonResponse({"code": "400", "message": "Invalid request method"})
     
         
     

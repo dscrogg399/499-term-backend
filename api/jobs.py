@@ -4,13 +4,16 @@ import re
 import random
 from datetime import datetime, timedelta
 from .models import Appliance
-import simpy
 from django .conf import settings
 import json
 from .weather import getTemperature, getHumidity, getTemperatureAtTime
 #import numpy as np
 from datetime import datetime, time, timezone
 from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
+import numpy as np
+from math import sqrt
+from scipy.stats import beta
+from scipy.optimize import minimize_scalar
 
 #import googleapiclient.discovery
 #import googleapiclient.errors
@@ -281,8 +284,8 @@ def temperature_calculation(current_temp, now):
 def is_weekday(time_period):
     return time_period.weekday() < 5
 
-def time_in_range(time_period, begin, end):
-    return begin <= time_period.time() <= end
+def time_in_range(now, start, end):
+    return start <= now <= end
 
 def random_time(begin, end):
     return begin + timedelta(minutes=random.uniform(0,(end-begin).seconds//60))
@@ -290,153 +293,502 @@ def random_time(begin, end):
 def random_duration(begin, end):
     return timedelta(minutes = random.uniform(begin, end))
 
+def get_custom_probability_distribution(probability, num_minutes):
+    # Create a custom distribution with a peak at the midpoint
+    minutes = np.arange(num_minutes)
+    distribution = np.abs(np.sin(np.pi * minutes / (num_minutes - 1)))
+    
+    # Normalize the distribution to match the desired probability
+    distribution /= distribution.sum()
+    distribution *= probability
+    
+    return distribution
+
+def should_event_occur(probability, start, end, now):
+    if not time_in_range(now, start, end):
+        return False
+    total_minutes = int((end - start).total_seconds() / 60)
+    adjusted_probability = 1 - (1 - probability) ** (1 / total_minutes)
+    
+    return random.random() < adjusted_probability
+
 def event_loop():
+    now = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=2)
+    #get the current time
     on_Appliances = Appliance.objects.filter(status = True, is_active = True)
-    print(on_Appliances.count())
     off_Appliances =  Appliance.objects.filter(status = False, is_active = True)
-    print(off_Appliances.count())
 
-    
-    
-    
-def clothes_dryer_washer (env, time_period):
-    currentAppliance = Appliance()
+    for appliance in off_Appliances:
+        if appliance.id == 33:
+            # start = now.replace(hour=23, minute=0) + timedelta(days=-1)
+            # end = now.replace(hour=3, minute=59)
+            # current_datetime = start
 
-    if is_weekday(time_period):
-       begin = datetime.strptime("5:30 PM", "%I%M %p").time()
-       end = (datetime.strptime("5:30 PM", "%I:%M %p") + timedelta(minutes=10)).time()
-       
-       if time_in_range(time_period, begin, end) and random.random() < 0.57 and currentAppliance.title == "Washer":
-           currentAppliance.status = True
-           
-       if time_in_range(time_period, begin, end) and currentAppliance.title == "Dryer":
-                dryer_begin = end(datetime.strptime(begin) + timedelta(minutes = 5)).time()
-                currentAppliance.status = True
-           
-def dishwasher (env, time_period):
-    currentAppliance = Appliance()
-    
-    if is_weekday(time_period):
-        
-       begin = datetime.strptime("7:00 PM", "%I%M %p").time()
-       end = (datetime.strptime("7:00 PM", "%I:%M %p") + timedelta(minutes=10)).time()
-       
-       if time_in_range(time_period, begin, end) and random.random() < 0.57 and currentAppliance.title == "Dishwasher":
-           currentAppliance.status = True
-           
-
-def MasterBedroomTV(env, time_period):
-    if is_weekday(time_period):
-        0
-        
-        
-def Refrigerator(env, time_period):
-    currentAppliance = Appliance()
-    begin = datetime.strptime("12:00 AM", "%I%M %p").time()
-    end = (datetime.strptime("11:59 PM", "%I:%M %p"))
-    
-    if(currentAppliance.title == "Refrigerator" and time_in_range(time_period, begin, end)):
-         currentAppliance.status = True
-         
-
-#def 
-    
-    
-    
-           
-           
-           
-           
-       
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   # startTime = None
-   
-   # currentAppliance = Appliance()
-   # timeInterval = None
-   # for i in currentAppliance():
-       # if currentAppliance.title == "Washer":
-            # code that takes 57% chances into account
-            # code that executes at 5:30pm for around 10 mins
-        
-        # not actual appliance names but dummy names until access them from db
-     #   if(currentAppliance.title == "MBR Shower" or "BR Shower"):
-        #status = true: on/open
-        #status = false: off/closed
-        #if(status = true)
-                    
+            trues = 0
+            not_trues = 0
+            for _ in range(10000):
+                start = now.replace(hour=23, minute=0) + timedelta(days=-1)
+                end = now.replace(hour=3, minute=59)
+                current_datetime = start
+                event_occurred = False
+                while current_datetime < end and not event_occurred:
+                    if should_event_occur(0.99, start, end, current_datetime):
+                        trues += 1
+                        event_occurred = True
+                    current_datetime += timedelta(minutes=1)
+                if not event_occurred:
+                    not_trues += 1
             
-       # if(currentAppliance.title == "MBD Lamp 1" or "MBD Lamp 2" or "BD1 Lamp 1" or "BD1 Lamp 2" or "BD2 Lamp 1" or "BD2 Lamp 2" ):
-            
-        
-       # if(currentAppliance.title == "LR Lamp 1" or "LR Lamp 2")
-        
-        # Master light?
-     #   if(currentAppliance.title == "MBD Overhead" or "MBR Overhead"):
-        
-        #Bathroom Light?
-      #  if(currentAppliance.title == "BR Overhead"):
-            
-        
-       # if(currentAppliance.title == "BD1 Overhead or BD2 Overhead"):
-        
-        # LR Light?
-        #if(currentAppliance.title == "KTC Overhead" or "LR Overhead"):
-        
-        
-        #if(currentAppliance.title == "MBD TV"):
-        
-        
-        #if(currentAppliance.title == "LR TV"):
-        
-        
-        #if(currentAppliance.title == "MBR Fan" or "BR Fan"):
-        
-        #Master Bathroom Sink?
-        #if(currentAppliance.title == "MBR Sink 1" or "MBR Sink 2" or "BR Sink"):
-        
-        
-        #if(currentAppliance.title == "KTC Sink"):
-        
-        
-        #if(currentAppliance.title == "Outdoor Tap"):
-        
-        # Master Bedroom and Bedroom Bath?
-        #if(currentAppliance.title == "MBR Bath" or "BR Bath"):
-        
-        
-        #if(currentAppliance.title == "Refrigerator"):
-        
-        
-        #if(currentAppliance.title == "Stove"):
-        
-        
-        #if(currentAppliance.title == "Oven"):
-        
-        
-        #if(currentAppliance.title == "Microwave"):
-        
-        
-        #if(currentAppliance.title == "Dishwasher"):
-        
-        
-        #if(currentAppliance.title == "HVAC"):
-        
-        
-        #if(currentAppliance.title == "Washer"):
-        
-        
-        #if(currentAppliance.title == "Dryer"):
-        
-        
-        #if(currentAppliance.title == "Water Heater"):
+            print(trues)
+            print(not_trues)
+            print(trues / (trues + not_trues))
     
+
+
+
+weekday_prob_dict = {
+    # Mbed lamp 1
+    1: {
+        "pm": {
+            "start": {
+                "hour": 20,
+                "minute": 30,
+                "delta": 10
+            },
+            "end": {
+                "hour": 10,
+                "minute": 30,
+                "delta": 10
+            }
+        },
+    },
+    # Mbed lamp 2
+    2: {
+        "pm": {
+            "start": {
+                "hour": 20,
+                "minute": 30,
+                "delta": 10
+                },
+            "end": {
+                "hour": 10,
+                "minute": 30,
+                "delta": 10
+            }
+        },
+    },
+    #Mbed overhead light
+    3: {
+        "am": {
+            "start": {
+                "hour": 5,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 25,
+                "delta": 2
+            },
+        "pm": {
+            "start": {
+                "hour": 17,
+                "minute": 30,
+                "delta": 10
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+                "delta": 10
+            }
+        }
+        }
+    },
+    #Mbath overhead light
+    4: {
+        "pm": {
+            "start": {
+                "hour": 18,
+                "minute": 0,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+            "num": 3,
+            "delta": 2,
+            "duration": 6,
+            "dur_delta": 4
+        },
+
+
+
+    },
+    #bathroom overhead light
+    5: {
+        "pm": {
+            "start": {
+                "hour": 18,
+                "minute": 0,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+            "num": 3,
+            "delta": 2,
+            "duration": 6,
+            "dur_delta": 4
+        },
+    },
+    #Bedroom 1 lamp 1
+    6: {
+        "pm": {
+            "start": {
+                "hour": 19,
+                "minute": 30,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+        },
+    },
+    #Bedroom 1 lamp 2
+    7: {
+        "pm": {
+            "start": {
+                "hour": 19,
+                "minute": 30,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+        },
+    },
+    #Bedroom 1 overhead light
+    8: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 25,
+                "delta": 2
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 19,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+    },
+    #Bedroom 2 lamp 1
+    9: {
+        "pm": {
+            "start": {
+                "hour": 19,
+                "minute": 30,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+        },
+    },
+    #Bedroom 2 lamp 2
+    10: {
+        "pm": {
+            "start": {
+                "hour": 19,
+                "minute": 30,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+        },
+    },
+    #Bedroom 2 overhead light
+    11: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 25,
+                "delta": 2
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 19,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+    },
+    #kitchen overhead light
+    12: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 25,
+                "delta": 2
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 19,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+    },
+    #LR lamp 1
+    13: {
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+            "num": 6,
+            "delta": 4,
+            "duration": 27,
+            "dur_delta": 15
+        },
+    },
+    #LR lamp 2
+    14: {
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 30,
+            },
+            "num": 6,
+            "delta": 4,
+            "duration": 27,
+            "dur_delta": 15
+        },
+    },
+    #LR overhead
+    15: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 25,
+                "delta": 2
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 19,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+    },
+    #Mbed tv
+    16: {
+        "am": {
+            "start": {
+                "hour": 5,
+                "minute": 30,
+                "delta": 10
+            },
+            "end": {
+                "hour": 6,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 21,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 22,
+                "minute": 30,
+                "delta": 10
+            },
+        },
+    },
+    #lr tv
+    17: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 0,
+                "delta": 10
+            },
+        },
+        "pm": {
+            "start": {
+                "hour": 4,
+                "minute": 0,
+                "delta": 10
+            },
+            "end": {
+                "hour": 7,
+                "minute": 30,
+                "delta": 10
+            },
+            "duration": 180,
+            "dur_delta": 30
+        },
+    },
+    #mbath shower
+    25: {
+        "am": {
+            "start": {
+                "hour": 5,
+                "minute": 10,
+                "delta": 5,
+                "duration": 15,
+                "dur_delta": 2
+            },
+        }
+    },
+    #bathroom bath
+    28: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 5,
+                "duration": 15,
+                "dur_delta": 2
+            },
+        }
+    },
+    #stove
+    30: {
+        "pm": {
+            "start": {
+                "hour": 18,
+                "minute": 30,
+                "delta": 30,
+                "duration": 15,
+                "dur_delta": 2
+            },
+        }
+    },
+    #oven
+    31: {
+        "pm": {
+            "start": {
+                "hour": 18,
+                "minute": 30,
+                "delta": 30,
+                "duration": 45,
+                "dur_delta": 0
+            },
+    }
+    },
+    #microwave
+    32: {
+        "am": {
+            "start": {
+                "hour": 6,
+                "minute": 0,
+                "delta": 10,
+            },
+            "end": {
+                "hour": 7,
+                "minute": 0,
+                "delta": 10,
+            },
+            "duration": 10,
+            "dur_delta": 2
+        },
+        "pm": {
+            "start": {
+                "hour": 16,
+                "minute": 0,
+                "delta": 10,
+            },
+            "end": {
+                "hour": 20,
+                "minute": 0,
+                "delta": 10,
+            },
+            "duration": 10,
+            "dur_delta": 2
+        }
+    },
+    #dishwasher
+    33: {
+        "probability": 0.57,
+        "start": {
+            "hour": 19,
+            "minute": 00,
+            "delta": 10,
+        },
+        "duration": 45,
+    },
+    #washer
+    34: {
+        "probability": 0.57,
+        "start": {
+            "hour": 17,
+            "minute": 0,
+            "delta": 10,    
+        },
+        "duration": 30,
+    },
+}
+
