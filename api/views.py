@@ -108,11 +108,8 @@ def air_quality(request):
 def monthly_report(request):
     # used to filter for specific reports
     date = parse_date(request.POST.get('date'))
-    print(date)
 
-
-    event_logs = Event_Log.objects.all().order_by('id').filter(is_active=True, created_at__month=date.month(), created_at__year=date.year())
-    
+    event_logs = Event_Log.objects.all().order_by('id').filter(is_active=True, created_at__month=date.month, created_at__year=date.year)
     
     serialized_event_logs = serializers.serialize('json', event_logs)
     return JsonResponse({"code": "200", "message": "Monthly report fetched", "data": json.loads(serialized_event_logs)})

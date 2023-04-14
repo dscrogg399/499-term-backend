@@ -11,9 +11,6 @@ from .weather import getTemperature, getHumidity, getTemperatureAtTime
 from datetime import datetime, time, timezone
 from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
 import numpy as np
-from math import sqrt
-from scipy.stats import beta
-from scipy.optimize import minimize_scalar
 
 #import googleapiclient.discovery
 #import googleapiclient.errors
@@ -346,449 +343,449 @@ def event_loop():
 
 
 
-weekday_prob_dict = {
-    # Mbed lamp 1
-    1: {
-        "pm": {
-            "start": {
-                "hour": 20,
-                "minute": 30,
-                "delta": 10
-            },
-            "end": {
-                "hour": 10,
-                "minute": 30,
-                "delta": 10
-            }
-        },
-    },
-    # Mbed lamp 2
-    2: {
-        "pm": {
-            "start": {
-                "hour": 20,
-                "minute": 30,
-                "delta": 10
-                },
-            "end": {
-                "hour": 10,
-                "minute": 30,
-                "delta": 10
-            }
-        },
-    },
-    #Mbed overhead light
-    3: {
-        "am": {
-            "start": {
-                "hour": 5,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 25,
-                "delta": 2
-            },
-        "pm": {
-            "start": {
-                "hour": 17,
-                "minute": 30,
-                "delta": 10
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-                "delta": 10
-            }
-        }
-        }
-    },
-    #Mbath overhead light
-    4: {
-        "pm": {
-            "start": {
-                "hour": 18,
-                "minute": 0,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-            "num": 3,
-            "delta": 2,
-            "duration": 6,
-            "dur_delta": 4
-        },
+# weekday_prob_dict = {
+#     # Mbed lamp 1
+#     1: {
+#         "pm": {
+#             "start": {
+#                 "hour": 20,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 10,
+#                 "minute": 30,
+#                 "delta": 10
+#             }
+#         },
+#     },
+#     # Mbed lamp 2
+#     2: {
+#         "pm": {
+#             "start": {
+#                 "hour": 20,
+#                 "minute": 30,
+#                 "delta": 10
+#                 },
+#             "end": {
+#                 "hour": 10,
+#                 "minute": 30,
+#                 "delta": 10
+#             }
+#         },
+#     },
+#     #Mbed overhead light
+#     3: {
+#         "am": {
+#             "start": {
+#                 "hour": 5,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 25,
+#                 "delta": 2
+#             },
+#         "pm": {
+#             "start": {
+#                 "hour": 17,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#                 "delta": 10
+#             }
+#         }
+#         }
+#     },
+#     #Mbath overhead light
+#     4: {
+#         "pm": {
+#             "start": {
+#                 "hour": 18,
+#                 "minute": 0,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#             "num": 3,
+#             "delta": 2,
+#             "duration": 6,
+#             "dur_delta": 4
+#         },
 
 
 
-    },
-    #bathroom overhead light
-    5: {
-        "pm": {
-            "start": {
-                "hour": 18,
-                "minute": 0,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-            "num": 3,
-            "delta": 2,
-            "duration": 6,
-            "dur_delta": 4
-        },
-    },
-    #Bedroom 1 lamp 1
-    6: {
-        "pm": {
-            "start": {
-                "hour": 19,
-                "minute": 30,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-        },
-    },
-    #Bedroom 1 lamp 2
-    7: {
-        "pm": {
-            "start": {
-                "hour": 19,
-                "minute": 30,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-        },
-    },
-    #Bedroom 1 overhead light
-    8: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 25,
-                "delta": 2
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 19,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-    },
-    #Bedroom 2 lamp 1
-    9: {
-        "pm": {
-            "start": {
-                "hour": 19,
-                "minute": 30,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-        },
-    },
-    #Bedroom 2 lamp 2
-    10: {
-        "pm": {
-            "start": {
-                "hour": 19,
-                "minute": 30,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-        },
-    },
-    #Bedroom 2 overhead light
-    11: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 25,
-                "delta": 2
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 19,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-    },
-    #kitchen overhead light
-    12: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 25,
-                "delta": 2
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 19,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-    },
-    #LR lamp 1
-    13: {
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-            "num": 6,
-            "delta": 4,
-            "duration": 27,
-            "dur_delta": 15
-        },
-    },
-    #LR lamp 2
-    14: {
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 30,
-            },
-            "num": 6,
-            "delta": 4,
-            "duration": 27,
-            "dur_delta": 15
-        },
-    },
-    #LR overhead
-    15: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 25,
-                "delta": 2
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 19,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-    },
-    #Mbed tv
-    16: {
-        "am": {
-            "start": {
-                "hour": 5,
-                "minute": 30,
-                "delta": 10
-            },
-            "end": {
-                "hour": 6,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 21,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 22,
-                "minute": 30,
-                "delta": 10
-            },
-        },
-    },
-    #lr tv
-    17: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 0,
-                "delta": 10
-            },
-        },
-        "pm": {
-            "start": {
-                "hour": 4,
-                "minute": 0,
-                "delta": 10
-            },
-            "end": {
-                "hour": 7,
-                "minute": 30,
-                "delta": 10
-            },
-            "duration": 180,
-            "dur_delta": 30
-        },
-    },
-    #mbath shower
-    25: {
-        "am": {
-            "start": {
-                "hour": 5,
-                "minute": 10,
-                "delta": 5,
-                "duration": 15,
-                "dur_delta": 2
-            },
-        }
-    },
-    #bathroom bath
-    28: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 5,
-                "duration": 15,
-                "dur_delta": 2
-            },
-        }
-    },
-    #stove
-    30: {
-        "pm": {
-            "start": {
-                "hour": 18,
-                "minute": 30,
-                "delta": 30,
-                "duration": 15,
-                "dur_delta": 2
-            },
-        }
-    },
-    #oven
-    31: {
-        "pm": {
-            "start": {
-                "hour": 18,
-                "minute": 30,
-                "delta": 30,
-                "duration": 45,
-                "dur_delta": 0
-            },
-    }
-    },
-    #microwave
-    32: {
-        "am": {
-            "start": {
-                "hour": 6,
-                "minute": 0,
-                "delta": 10,
-            },
-            "end": {
-                "hour": 7,
-                "minute": 0,
-                "delta": 10,
-            },
-            "duration": 10,
-            "dur_delta": 2
-        },
-        "pm": {
-            "start": {
-                "hour": 16,
-                "minute": 0,
-                "delta": 10,
-            },
-            "end": {
-                "hour": 20,
-                "minute": 0,
-                "delta": 10,
-            },
-            "duration": 10,
-            "dur_delta": 2
-        }
-    },
-    #dishwasher
-    33: {
-        "probability": 0.57,
-        "start": {
-            "hour": 19,
-            "minute": 00,
-            "delta": 10,
-        },
-        "duration": 45,
-    },
-    #washer
-    34: {
-        "probability": 0.57,
-        "start": {
-            "hour": 17,
-            "minute": 0,
-            "delta": 10,    
-        },
-        "duration": 30,
-    },
-}
+#     },
+#     #bathroom overhead light
+#     5: {
+#         "pm": {
+#             "start": {
+#                 "hour": 18,
+#                 "minute": 0,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#             "num": 3,
+#             "delta": 2,
+#             "duration": 6,
+#             "dur_delta": 4
+#         },
+#     },
+#     #Bedroom 1 lamp 1
+#     6: {
+#         "pm": {
+#             "start": {
+#                 "hour": 19,
+#                 "minute": 30,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#         },
+#     },
+#     #Bedroom 1 lamp 2
+#     7: {
+#         "pm": {
+#             "start": {
+#                 "hour": 19,
+#                 "minute": 30,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#         },
+#     },
+#     #Bedroom 1 overhead light
+#     8: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 25,
+#                 "delta": 2
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 19,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#     },
+#     #Bedroom 2 lamp 1
+#     9: {
+#         "pm": {
+#             "start": {
+#                 "hour": 19,
+#                 "minute": 30,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#         },
+#     },
+#     #Bedroom 2 lamp 2
+#     10: {
+#         "pm": {
+#             "start": {
+#                 "hour": 19,
+#                 "minute": 30,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#         },
+#     },
+#     #Bedroom 2 overhead light
+#     11: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 25,
+#                 "delta": 2
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 19,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#     },
+#     #kitchen overhead light
+#     12: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 25,
+#                 "delta": 2
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 19,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#     },
+#     #LR lamp 1
+#     13: {
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#             "num": 6,
+#             "delta": 4,
+#             "duration": 27,
+#             "dur_delta": 15
+#         },
+#     },
+#     #LR lamp 2
+#     14: {
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 30,
+#             },
+#             "num": 6,
+#             "delta": 4,
+#             "duration": 27,
+#             "dur_delta": 15
+#         },
+#     },
+#     #LR overhead
+#     15: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 25,
+#                 "delta": 2
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 19,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#     },
+#     #Mbed tv
+#     16: {
+#         "am": {
+#             "start": {
+#                 "hour": 5,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 6,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 21,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 22,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#         },
+#     },
+#     #lr tv
+#     17: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 4,
+#                 "minute": 0,
+#                 "delta": 10
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 30,
+#                 "delta": 10
+#             },
+#             "duration": 180,
+#             "dur_delta": 30
+#         },
+#     },
+#     #mbath shower
+#     25: {
+#         "am": {
+#             "start": {
+#                 "hour": 5,
+#                 "minute": 10,
+#                 "delta": 5,
+#                 "duration": 15,
+#                 "dur_delta": 2
+#             },
+#         }
+#     },
+#     #bathroom bath
+#     28: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 5,
+#                 "duration": 15,
+#                 "dur_delta": 2
+#             },
+#         }
+#     },
+#     #stove
+#     30: {
+#         "pm": {
+#             "start": {
+#                 "hour": 18,
+#                 "minute": 30,
+#                 "delta": 30,
+#                 "duration": 15,
+#                 "dur_delta": 2
+#             },
+#         }
+#     },
+#     #oven
+#     31: {
+#         "pm": {
+#             "start": {
+#                 "hour": 18,
+#                 "minute": 30,
+#                 "delta": 30,
+#                 "duration": 45,
+#                 "dur_delta": 0
+#             },
+#     }
+#     },
+#     #microwave
+#     32: {
+#         "am": {
+#             "start": {
+#                 "hour": 6,
+#                 "minute": 0,
+#                 "delta": 10,
+#             },
+#             "end": {
+#                 "hour": 7,
+#                 "minute": 0,
+#                 "delta": 10,
+#             },
+#             "duration": 10,
+#             "dur_delta": 2
+#         },
+#         "pm": {
+#             "start": {
+#                 "hour": 16,
+#                 "minute": 0,
+#                 "delta": 10,
+#             },
+#             "end": {
+#                 "hour": 20,
+#                 "minute": 0,
+#                 "delta": 10,
+#             },
+#             "duration": 10,
+#             "dur_delta": 2
+#         }
+#     },
+#     #dishwasher
+#     33: {
+#         "probability": 0.57,
+#         "start": {
+#             "hour": 19,
+#             "minute": 00,
+#             "delta": 10,
+#         },
+#         "duration": 45,
+#     },
+#     #washer
+#     34: {
+#         "probability": 0.57,
+#         "start": {
+#             "hour": 17,
+#             "minute": 0,
+#             "delta": 10,    
+#         },
+#         "duration": 30,
+#     },
+# }
 
