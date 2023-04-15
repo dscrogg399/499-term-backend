@@ -83,8 +83,6 @@ class Thermostat(models.Model):
     id = models.BigAutoField(primary_key=True)
     current_temp = models.FloatField()
     target_temp = models.FloatField()
-    min_temp = models.FloatField()
-    max_temp = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField()
 

@@ -48,7 +48,6 @@ Humidity:
 
 """
 def air_quality_job():
-    print("running air quality job")
     #get current time
     curr_time = datetime.now().time()
     is_busy = False
@@ -236,16 +235,16 @@ def hvac_job():
         #if the current temp was higher and is now lower than the target temp
         if higher and updated_temp < target_temp:
             #toggle the hvac off, need the function
-            hvac.status  = False
+            hvac.toggle_appliance(now)
         #if the current temp was lower and is now higher than the target temp
         elif not higher and updated_temp > target_temp:
             #toggle the hvac off
-            hvac.status = False
+            hvac.toggle_appliance(now)
     #if the hvac is off and the updated temp is outside the min and max range
     elif updated_temp < min or updated_temp > max:
         #toggle the hvac on
-        hvac.status = True
-    
+        hvac.toggle_appliance(now)
+
     #update the thermostat
     thermostat.current_temp = updated_temp
     thermostat.save()
@@ -289,17 +288,6 @@ def random_time(begin, end):
    
 def random_duration(begin, end):
     return timedelta(minutes = random.uniform(begin, end))
-
-def get_custom_probability_distribution(probability, num_minutes):
-    # Create a custom distribution with a peak at the midpoint
-    minutes = np.arange(num_minutes)
-    distribution = np.abs(np.sin(np.pi * minutes / (num_minutes - 1)))
-    
-    # Normalize the distribution to match the desired probability
-    distribution /= distribution.sum()
-    distribution *= probability
-    
-    return distribution
 
 def should_event_occur(probability, start, end, now):
     if not time_in_range(now, start, end):
