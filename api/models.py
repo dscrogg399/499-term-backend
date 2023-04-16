@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.db import models
+from api.utils import get_minutes_difference
 
 # Create your models here.
 
@@ -48,8 +49,7 @@ class Appliance(models.Model):
                 pass
         else:
             #generate event
-            event_log = Event_Log.objects.filter(is_active=True).latest('created_at')
-            new_event = Event.start_event(self.id, event_log.id, now, True)
+            new_event = Event.start_event(self.id, now, True)
             new_event.save()
         self.status = not self.status
         self.save()
@@ -87,8 +87,8 @@ class Thermostat(models.Model):
     is_active = models.BooleanField()
 
     @classmethod
-    def create(cls, current_temp, target_temp, min_temp, max_temp, is_active):
-        thermostat = cls(current_temp, target_temp, min_temp, max_temp, is_active)
+    def create(cls, current_temp, target_temp, is_active):
+        thermostat = cls(current_temp, target_temp, is_active)
         return thermostat
     
     def __str__(self):
@@ -128,30 +128,10 @@ class Budget_Target(models.Model):
     def __str__(self):
         return self.id
 
-class Event_Log(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    watts_used = models.FloatField(null=True)
-    water_used = models.FloatField(null=True)
-    cost = models.FloatField(null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField()
-
-    @classmethod
-    def create(cls, is_active):
-        event_log = cls(watts_used = 0, water_used = 0, cost = 0, is_active = is_active)
-        return event_log
-    
-    def __str__(self):
-        return self.id
-
 class Event(models.Model):
     id = models.BigAutoField(primary_key=True)
     appliance = models.ForeignKey(
         Appliance,
-        on_delete=models.PROTECT,
-        null=True)
-    log = models.ForeignKey(
-        Event_Log,
         on_delete=models.PROTECT,
         null=True)
     on_at = models.DateTimeField()
@@ -163,26 +143,26 @@ class Event(models.Model):
     is_active = models.BooleanField(null=True)
 
     @classmethod
-    def create(cls, appliance_id, on_at, off_at, watts_used, water_used, cost, log_id, is_active):
+    def create(cls, appliance_id, on_at, off_at, watts_used, water_used, cost, is_active):
         event = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, watts_used = watts_used, 
-                    water_used = water_used, cost = cost, log_id = log_id, is_active = is_active)
+                    water_used = water_used, cost = cost, is_active = True)
         return event
     
     # function for creating events without energy, water and cost parameters
     @classmethod
     def create_lite(cls, appliance_id, on_at, off_at, is_active):  
-        event_lite = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, is_active = is_active)
-        return event_lite
+        event = cls(appliance_id = appliance_id, on_at = on_at, off_at = off_at, is_active = is_active)
+        return event
 
     @classmethod
-    def start_event(cls, appliance_id, log_id, on_at, is_active):  
-        event_lite = cls(appliance_id = appliance_id, log_id = log_id, on_at = on_at, is_active = is_active)
-        return event_lite
+    def start_event(cls, appliance_id, on_at, is_active):  
+        event = cls(appliance_id = appliance_id, on_at = on_at, is_active = is_active)
+        return event
     
     def end_event(self, off_at, appliance_type_id):
         self.off_at = off_at
         # #calculate difference between on_at and off_at
-        diff = (off_at - self.on_at).total_seconds() / 60
+        diff = get_minutes_difference(self.on_at, off_at)
 
         # #get appliance type
         appliance_type = Appliance_Type.objects.get(id = appliance_type_id)
@@ -216,11 +196,11 @@ class Event(models.Model):
 
             #water heater is appliance id 37
             #create event
-            wh_event = Event.create(37, new_on_at, off_at, wh_watts, 0, wh_cost, self.log_id, True)
+            wh_event = Event.create(37, new_on_at, off_at, wh_watts, 0, wh_cost, True)
             wh_event.save()
 
 
-        # #update log
+        # #update event
         self.save()
         return
     
