@@ -1,43 +1,42 @@
-# functions that will be used to populate tables with history of temperature data
-from datetime import datetime, timedelta
-from meteostat import Hourly, Point
-import csv
 import ssl
 
-ssl._create_default_https_context = ssl._create_stdlib_context
+from datetime import datetime, timedelta
+from meteostat import Hourly, Point
 
+
+# functions that will be used to populate tables with history of temperature data
+ssl._create_default_https_context = ssl._create_stdlib_context
 
 #creates a point for Birmingham, AL
 birmingham = Point(33.5186, -86.8104)
 
-# gets hourly data for the past week, excluding the current hour, 168 entries
-def getWeeklyHistory():
-    end = datetime.now()
-    beginning = end - timedelta(days = 7)
+# gets hourly data for the given time frame excluding the current hour, 168 entries
+def getWeatherHistory(start, end):
 
-    data = Hourly(birmingham, beginning, end)
+    data = Hourly(birmingham, start, end)
     data = data.fetch()
     data_trim = data['temp'].tolist()
+    
 
     data_trim_datetime = []
 
     for i in range(len(data_trim)):
-        data_trim_datetime.append([beginning + timedelta(hours=i), data_trim[i]])
+        data_trim_datetime.append([start + timedelta(hours=i), celsius_to_fahrenheit(data_trim[i])])
 
-    return(data_trim_datetime)
+    result = {}
 
-# gets data for the current hour
-def getTemperature():
-    now = datetime.now()
+    for entry in data_trim_datetime:
+        dt, value = entry
+        date = dt.date()
+        hour = dt.hour
 
-    #get weather from meteostat
-    data = Hourly(birmingham, now - timedelta(hours=1), now)
-    temp = data.fetch()['temp'].tolist()[0]
+        if date not in result:
+            result[date] = [None] * 24
 
-    #convert to fahrenheit
-    temp = celsius_to_fahrenheit(temp)
+        result[date][hour] = value
 
-    return(temp)
+    return result
+
 
 #get temp at specific time
 def getTemperatureAtTime(time):
@@ -50,16 +49,16 @@ def getTemperatureAtTime(time):
 
     return(temp)
 
-
+#gets humidity at a given time
 def getHumidity():
     now = datetime.now()
-
     #get weather from meteostat
     data = Hourly(birmingham, now - timedelta(minutes=1), now)
     humidity = data.fetch()['rhum'].tolist()[0]
 
     return(humidity)
 
+#convert C to F
 def celsius_to_fahrenheit(celsius_temp):
     fahrenheit_temp = (celsius_temp * 9/5) + 32
     return fahrenheit_temp
