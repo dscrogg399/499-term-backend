@@ -16,7 +16,6 @@ def historic_hvac_util(time, now):
 
     #difference in minutes between now and start
     diff = math.floor(get_minutes_difference(time, now))
-    print(diff)
 
     #get the thermostat and HVAC (thermostat id = 1, HVAC id = 34)
     thermostat = Thermostat.objects.get(id=1)
@@ -43,9 +42,12 @@ def historic_hvac_util(time, now):
 
     #hvac status
     hvac_status = False
+    
+    #save last outdoor temp in case we run out
+    last_outdoor = None
 
     for index in range(diff):
-        print(str(index) + "/" + str(diff))
+        print("Historic HVAC:" + str(index) + "/" + str(diff))
 
         higher = current_temp > thermostat.target_temp
 
@@ -59,7 +61,13 @@ def historic_hvac_util(time, now):
         index_date = time.date()
         index_hour = time.hour
         #calulate the update temperature for that time
-        updated_temp = historic_temperature_calculation(current_temp,  weather[index_date][index_hour])
+        updated_temp = 0
+        outdoor =  weather[index_date][index_hour]
+        if outdoor is None:
+            updated_temp = historic_temperature_calculation(current_temp, last_outdoor)
+        else:
+            updated_temp = historic_temperature_calculation(current_temp, outdoor)
+            last_outdoor = outdoor
         
         #if hvac is off and temp in range, continue
         if not hvac_status and updated_temp >= min and updated_temp <= max:

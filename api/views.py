@@ -7,15 +7,19 @@ from datetime import datetime
 from django.db.models import Sum, Window, F
 from django.db.models.functions import TruncDate
 from django.db.models.functions.window import RowNumber
-from .event_utils import prob_test
+from .event_utils import *
 from api.models import *
 from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_GET
 from .jobs import * 
+from calendar import monthrange
 
 
 def index(request):   
-    prob_test()
+    # test()
+    # startup_data_generator()
+    # event_loop()
+    # door_job()
     return HttpResponse("Team 4")
 
 #appliances, GET returns full list POST toggles appliance and returns updated appliance
@@ -109,6 +113,18 @@ def monthly_report(request):
     if request.method == "POST":
         # used to filter for specific reports
         date = parse_date(json.loads(request.body)['date'])
+
+        #get the day of month of the first event in a month
+        first_event = Event.objects.filter(
+            is_active=True,
+            off_at__isnull=False,
+            on_at__year=date.year,  # Filter events by the year of the given date
+            on_at__month=date.month  # Filter events by the month of the given date
+        ).order_by('on_at').first()
+
+        first_day = first_event.on_at.day if first_event else 1
+
+        #get the difference in days between first day of month and first event
         # get all the events for the month excluding the event log for today
         events = Event.objects.filter(
             is_active=True,
@@ -123,13 +139,15 @@ def monthly_report(request):
             watts_used=Sum('watts_used'),
             water_used=Sum('water_used'),
             cost=Sum('cost'),
-            row_number=Window(expression=RowNumber(), order_by=F('date').asc())  # Add row number
+            row_number=Window(expression=RowNumber(), order_by=F('date').asc())
         ).order_by('date')
 
-        # Convert the queryset of dictionaries to a list of dictionaries
-        event_logs_list = list(events)
+        #generate empty events if necessary
+        final_events = []
+        for item in events:
+            final_events.append({"date": item['date'], "watts_used": item['watts_used'], "water_used": item['water_used'], "cost": item['cost']})
 
-        return JsonResponse({"code": 200, "message": "Monthly report fetched", "data": event_logs_list}, safe=False)
+        return JsonResponse({"code": 200, "message": "Monthly report fetched", "first_day": first_day, "data": final_events}, safe=False)
     else:
         return JsonResponse({"code": 400, "message": "Invalid request method"})
 
@@ -177,7 +195,7 @@ def create_event(request):
 
 @require_GET
 def get_todays_events(request):
-    now = datetime.utcnow().date()
+    now = datetime.now()
     events = Event.objects.filter(
         is_active=True,
         off_at__isnull=False,

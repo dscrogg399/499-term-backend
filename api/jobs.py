@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import random
 from api.air_utils import vary_co, vary_co2, vary_hum, vary_pm
 from api.event_utils import should_event_occur
 from api.hvac_utils import temperature_calculation
@@ -6,6 +7,7 @@ from api.utils import time_in_range
 from .weather import getTemperatureAtTime
 from datetime import datetime, time, timedelta
 from api.models import Air_Quality, Aperture, Thermostat, Aperture, Appliance
+import time as t
 
 #start and end time of busy time is always the same, 6-7 pm. This is converted to UTC time
 start_time = time(18, 0, 0)
@@ -109,7 +111,7 @@ def hvac_job():
             current_temp += 1
 
     #now calculate the updated temp from outside temp difference and apertures using the current temp after hvac changes
-    updated_temp = temperature_calculation(current_temp, now, outdoor)
+    updated_temp = temperature_calculation(current_temp, outdoor)
 
     #now manage the hvac based on the updated temp
     #if the hvac is already on
@@ -133,7 +135,7 @@ def hvac_job():
     #update the hvac
     hvac.save()
 
-def event_loop():
+def old_event_loop():
     now = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=2)
     #get the current time
     off_Appliances =  Appliance.objects.filter(status = False, is_active = True)
@@ -162,452 +164,41 @@ def event_loop():
             print(trues)
             print(not_trues)
             print(trues / (trues + not_trues))
+    
+def door_job():
+    now = datetime.now() 
+    doors = Aperture.objects.filter(type=1)
+
+    for door in doors:
+        weekday = now.weekday() < 5
+        day_key = "wd" if weekday else "we"
+        ranges = door_dict[door.id][day_key]
+        for range in ranges:
+            if range["start"] < now.time() < range["end"]:
+                rand = random.random()
+                if rand < range["prob"]:
+                    door.status = True
+                    door.save()
+                    print("door opened")
+                    t.sleep(30)
+                    door.status = False
+                    door.save()
+                    print("door closed")
+                    break
 
 
-
-# weekday_prob_dict = {
-#     # Mbed lamp 1
-#     1: {
-#         "pm": {
-#             "start": {
-#                 "hour": 20,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 10,
-#                 "minute": 30,
-#                 "delta": 10
-#             }
-#         },
-#     },
-#     # Mbed lamp 2
-#     2: {
-#         "pm": {
-#             "start": {
-#                 "hour": 20,
-#                 "minute": 30,
-#                 "delta": 10
-#                 },
-#             "end": {
-#                 "hour": 10,
-#                 "minute": 30,
-#                 "delta": 10
-#             }
-#         },
-#     },
-#     #Mbed overhead light
-#     3: {
-#         "am": {
-#             "start": {
-#                 "hour": 5,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 25,
-#                 "delta": 2
-#             },
-#         "pm": {
-#             "start": {
-#                 "hour": 17,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#                 "delta": 10
-#             }
-#         }
-#         }
-#     },
-#     #Mbath overhead light
-#     4: {
-#         "pm": {
-#             "start": {
-#                 "hour": 18,
-#                 "minute": 0,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#             "num": 3,
-#             "delta": 2,
-#             "duration": 6,
-#             "dur_delta": 4
-#         },
-
-
-
-#     },
-#     #bathroom overhead light
-#     5: {
-#         "pm": {
-#             "start": {
-#                 "hour": 18,
-#                 "minute": 0,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#             "num": 3,
-#             "delta": 2,
-#             "duration": 6,
-#             "dur_delta": 4
-#         },
-#     },
-#     #Bedroom 1 lamp 1
-#     6: {
-#         "pm": {
-#             "start": {
-#                 "hour": 19,
-#                 "minute": 30,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#         },
-#     },
-#     #Bedroom 1 lamp 2
-#     7: {
-#         "pm": {
-#             "start": {
-#                 "hour": 19,
-#                 "minute": 30,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#         },
-#     },
-#     #Bedroom 1 overhead light
-#     8: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 25,
-#                 "delta": 2
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 19,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#     },
-#     #Bedroom 2 lamp 1
-#     9: {
-#         "pm": {
-#             "start": {
-#                 "hour": 19,
-#                 "minute": 30,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#         },
-#     },
-#     #Bedroom 2 lamp 2
-#     10: {
-#         "pm": {
-#             "start": {
-#                 "hour": 19,
-#                 "minute": 30,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#         },
-#     },
-#     #Bedroom 2 overhead light
-#     11: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 25,
-#                 "delta": 2
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 19,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#     },
-#     #kitchen overhead light
-#     12: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 25,
-#                 "delta": 2
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 19,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#     },
-#     #LR lamp 1
-#     13: {
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#             "num": 6,
-#             "delta": 4,
-#             "duration": 27,
-#             "dur_delta": 15
-#         },
-#     },
-#     #LR lamp 2
-#     14: {
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 30,
-#             },
-#             "num": 6,
-#             "delta": 4,
-#             "duration": 27,
-#             "dur_delta": 15
-#         },
-#     },
-#     #LR overhead
-#     15: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 25,
-#                 "delta": 2
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 19,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#     },
-#     #Mbed tv
-#     16: {
-#         "am": {
-#             "start": {
-#                 "hour": 5,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 6,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 21,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 22,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#         },
-#     },
-#     #lr tv
-#     17: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 4,
-#                 "minute": 0,
-#                 "delta": 10
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 30,
-#                 "delta": 10
-#             },
-#             "duration": 180,
-#             "dur_delta": 30
-#         },
-#     },
-#     #mbath shower
-#     25: {
-#         "am": {
-#             "start": {
-#                 "hour": 5,
-#                 "minute": 10,
-#                 "delta": 5,
-#                 "duration": 15,
-#                 "dur_delta": 2
-#             },
-#         }
-#     },
-#     #bathroom bath
-#     28: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 5,
-#                 "duration": 15,
-#                 "dur_delta": 2
-#             },
-#         }
-#     },
-#     #stove
-#     30: {
-#         "pm": {
-#             "start": {
-#                 "hour": 18,
-#                 "minute": 30,
-#                 "delta": 30,
-#                 "duration": 15,
-#                 "dur_delta": 2
-#             },
-#         }
-#     },
-#     #oven
-#     31: {
-#         "pm": {
-#             "start": {
-#                 "hour": 18,
-#                 "minute": 30,
-#                 "delta": 30,
-#                 "duration": 45,
-#                 "dur_delta": 0
-#             },
-#     }
-#     },
-#     #microwave
-#     32: {
-#         "am": {
-#             "start": {
-#                 "hour": 6,
-#                 "minute": 0,
-#                 "delta": 10,
-#             },
-#             "end": {
-#                 "hour": 7,
-#                 "minute": 0,
-#                 "delta": 10,
-#             },
-#             "duration": 10,
-#             "dur_delta": 2
-#         },
-#         "pm": {
-#             "start": {
-#                 "hour": 16,
-#                 "minute": 0,
-#                 "delta": 10,
-#             },
-#             "end": {
-#                 "hour": 20,
-#                 "minute": 0,
-#                 "delta": 10,
-#             },
-#             "duration": 10,
-#             "dur_delta": 2
-#         }
-#     },
-#     #dishwasher
-#     33: {
-#         "probability": 0.57,
-#         "start": {
-#             "hour": 19,
-#             "minute": 00,
-#             "delta": 10,
-#         },
-#         "duration": 45,
-#     },
-#     #washer
-#     34: {
-#         "probability": 0.57,
-#         "start": {
-#             "hour": 17,
-#             "minute": 0,
-#             "delta": 10,    
-#         },
-#         "duration": 30,
-#     },
-# }
+door_dict = {
+    14:{
+        "wd": [{"start": time(16, 10), "end": time(19, 0), "prob": 0.05}],
+        "we": [{"start": time(8, 0), "end": time(19, 0), "prob": 0.02424}]
+    },
+    15:{
+        "wd": [{"start": time(7, 15) , "end": time(7,45), "prob": 0.13}, {"start": time(15, 50) , "end": time(16, 0), "prob": 0.2}],
+        "we": [{"start": time(8, 0), "end": time(19, 0), "prob": 0.01212}]
+    },
+    16:{
+        "wd": [{"start": time(7, 15) , "end": time(7,45), "prob": 0.13}, {"start": time(17, 15) , "end": time(17, 45), "prob": 0.1}],
+        "we": [{"start": time(8, 0), "end": time(19, 0), "prob": 0.01212}]
+    },
+}
 
